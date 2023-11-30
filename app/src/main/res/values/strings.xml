@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MediaService</string>
+    <string name="switch_bt_music">Play Bluetooth music for you?</string>
+    <string name="no_music">No Music</string>
+</resources>

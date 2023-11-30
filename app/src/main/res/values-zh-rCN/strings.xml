@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MediaService</string>
+    <string name="switch_bt_music">为您播放蓝牙音乐？</string>
+    <string name="no_music">暂无音乐</string>
+</resources>

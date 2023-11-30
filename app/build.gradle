@@ -1,0 +1,103 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.ts.service'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.ts.service"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    signingConfigs {
+        config {
+            storeFile file("platform_mtk.jks")
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    dataBinding {
+        enabled = true;
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable true
+            signingConfig signingConfigs.config
+        }
+        debug {
+            signingConfig signingConfigs.config
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation project(path: ':mediasdk')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.10.0'
+    implementation files('libs/systemsettings_sdk.jar')
+    implementation files('libs/engineermode_sdk.jar')
+    implementation files('libs/android_media.jar')
+    compileOnly files('libs/carservice.jar')
+    compileOnly files('libs/framework.jar')
+
+    implementation files('libs/OnlineMusic.jar')
+    implementation files('libs/saic_cp_aa.jar')
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'androidx.room:room-rxjava2:2.6.0'
+    annotationProcessor "androidx.room:room-compiler:2.6.0"
+    implementation 'android.arch.lifecycle:extensions:1.1.1'
+    annotationProcessor 'android.arch.lifecycle:compiler:1.1.1'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+}
+
+tasks.register('extractFiles', Copy) {
+    // 指定要提取文件的来源 JAR 文件
+    def sourceJar = file('libs/framework.jar')
+
+    // 创建临时目录用于提取文件
+    println("buildDir===>" + "$buildDir")
+    def tempDir = file("$buildDir/extractedFiles")
+    from(zipTree(sourceJar))
+    into(tempDir)
+    // 包括需要提取的文件，例如只包括包名为 com/example 下的所有 .class 文件
+    include 'android/media/*.class'
+}
+
+tasks.register('createNewJar', Jar) {
+    // 指定输出的 JAR 文件名
+    archiveFileName = 'android_media.jar'
+
+    // 从之前提取的文件目录中获取文件
+    def extractedDir = file("$buildDir/extractedFiles")
+    from(extractedDir)
+
+    // 将文件打包到新的 JAR 中
+    into('') // 保持文件在根目录
+    // 可以添加其他需要的配置，例如 Manifest 等
+
+    // 完成后删除临时文件夹
+    doLast {
+        delete extractedDir
+        println("====>succss")
+    }
+}
+
+// 将提取文件和创建新 Jar 的任务串联起来
+createNewJar.dependsOn extractFiles
+
