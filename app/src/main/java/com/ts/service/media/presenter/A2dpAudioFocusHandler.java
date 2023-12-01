@@ -1,25 +1,18 @@
 package com.ts.service.media.presenter;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothA2dpSink;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.AudioManager.OnAudioFocusChangeListener;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
-
-import androidx.core.app.ActivityCompat;
-
-import com.ts.service.media.UsbServiceApplication;
 import com.ts.service.media.constants.BtConstants;
 import com.ts.service.media.receiver.HardKeyMonitor;
 import com.ts.service.media.utils.LogUtil;
@@ -81,7 +74,7 @@ public class A2dpAudioFocusHandler extends Handler {
     private boolean mIsTransientLossFocus = false;
 
     // Focus changes when we are currently holding focus.
-    private OnAudioFocusChangeListener mAudioFocusListener = new OnAudioFocusChangeListener() {
+    private final OnAudioFocusChangeListener mAudioFocusListener = new OnAudioFocusChangeListener() {
         @Override
         public void onAudioFocusChange(int focusChange) {
             LogUtil.debug(TAG, "onAudioFocusChangeListener focuschange " + focusChange);
@@ -100,39 +93,34 @@ public class A2dpAudioFocusHandler extends Handler {
         mBtManager = BtManager.getInstance(mContext);
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        bluetoothAdapter.getProfileProxy(mContext, mA2dpSinkServiceListener,
-                BtConstants.A2DP_SINK);
+        BluetoothProfile.ServiceListener a2dpSinkServiceListener = new BluetoothProfile
+                .ServiceListener() {
+            @Override
+            public void onServiceConnected(int profile, BluetoothProfile proxy) {
+                if (profile == BtConstants.A2DP_SINK) {
+                    mA2dpSinkService = (BluetoothA2dpSink) proxy;
+                    getConnectDevice(mA2dpSinkService);
+                    mIsTransientLossFocus = false;
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(int profile) {
+                LogUtil.debug(TAG, "A2dpSinkService disconnected");
+                mAudioFocus = AudioManager.AUDIOFOCUS_NONE;
+                stopA2dpRender();
+                mA2dpSinkService = null;
+                mDevice = null;
+            }
+        };
+        bluetoothAdapter.getProfileProxy(mContext, a2dpSinkServiceListener, BtConstants.A2DP_SINK);
     }
 
-    private BluetoothProfile.ServiceListener mA2dpSinkServiceListener = new BluetoothProfile
-            .ServiceListener() {
-        @Override
-        public void onServiceConnected(int profile, BluetoothProfile proxy) {
-            if (profile == BtConstants.A2DP_SINK) {
-                mA2dpSinkService = (BluetoothA2dpSink) proxy;
-                getConnectDevice(mA2dpSinkService);
-                mIsTransientLossFocus = false;
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(int profile) {
-            LogUtil.debug(TAG, "A2dpSinkService disconnected");
-            mAudioFocus = AudioManager.AUDIOFOCUS_NONE;
-            stopA2dpRender();
-            mA2dpSinkService = null;
-            mDevice = null;
-        }
-    };
-
+    @SuppressLint("MissingPermission")
     private void getConnectDevice(BluetoothA2dpSink bluetoothA2dpSink) {
         List<BluetoothDevice> devices = bluetoothA2dpSink.getConnectedDevices();
         LogUtil.debug(TAG, "A2dpSinkService devices : " + devices);
         if (devices == null) {
-            return;
-        }
-        if (ActivityCompat.checkSelfPermission(UsbServiceApplication.getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            LogUtil.debug(TAG, "no BLUETOOTH_CONNECT permission....");
             return;
         }
         LogUtil.debug(TAG, "A2dpSinkService devices size： " + devices.size());

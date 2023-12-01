@@ -41,14 +41,14 @@ public class MediaService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.d(TAG, "onBind:onBind ");
+        Log.d(TAG, "onBind:onBind======= ");
         return getBinder(intent);
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "onCreate:onCreate ");
+        Log.d(TAG, "onCreate:onCreate=========");
         setForeground();
         mUsbDeviceMonitor = UsbDeviceMonitor.getInstance(getApplicationContext());
         mUsbDeviceMonitor.initialization();

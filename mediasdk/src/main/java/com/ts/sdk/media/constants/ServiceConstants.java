@@ -21,8 +21,7 @@ public class ServiceConstants {
     public static final String SERVICE_CLASS_NAME = "com.ts.service.media.MediaService";
 
     public static final String CP_AA_SERVICE_PKG_NAME = "com.allgo.remoteui.mediabrowserservice";
-    public static final String CP_AA_SERVICE_CLS_NAME =
-            "com.allgo.remoteui.mediabrowserservice.RemoteUIMediaBrowserService";
+    public static final String CP_AA_SERVICE_CLS_NAME = "com.allgo.remoteui.mediabrowserservice.RemoteUIMediaBrowserService";
 
     public static final int MEDIA_SCANNER_STARTED = 1;
     public static final int MEDIA_SCANNER_FINISHED = 2;

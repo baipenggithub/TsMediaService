@@ -52,7 +52,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.10.0'
     implementation files('libs/systemsettings_sdk.jar')
     implementation files('libs/engineermode_sdk.jar')
-    implementation files('libs/android_media.jar')
+    implementation files('libs/ts_framework.jar')
     compileOnly files('libs/carservice.jar')
     compileOnly files('libs/framework.jar')
 
@@ -69,19 +69,19 @@ dependencies {
 tasks.register('extractFiles', Copy) {
     // 指定要提取文件的来源 JAR 文件
     def sourceJar = file('libs/framework.jar')
-
     // 创建临时目录用于提取文件
     println("buildDir===>" + "$buildDir")
     def tempDir = file("$buildDir/extractedFiles")
     from(zipTree(sourceJar))
     into(tempDir)
     // 包括需要提取的文件，例如只包括包名为 com/example 下的所有 .class 文件
+    include 'android/bluetooth/*.class'
     include 'android/media/*.class'
 }
 
 tasks.register('createNewJar', Jar) {
     // 指定输出的 JAR 文件名
-    archiveFileName = 'android_media.jar'
+    archiveFileName = 'ts_framework.jar'
 
     // 从之前提取的文件目录中获取文件
     def extractedDir = file("$buildDir/extractedFiles")

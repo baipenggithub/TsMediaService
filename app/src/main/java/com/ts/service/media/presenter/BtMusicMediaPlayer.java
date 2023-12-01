@@ -134,8 +134,7 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
                                 BluetoothAdapter.STATE_OFF);
                         if (state == BluetoothAdapter.STATE_OFF) {
                             mA2dpSinkState = BtConstants.CONNECTION_STATE_DISCONNECTED;
-                            broadcastConnectionStateChange(
-                                    BtConstants.CONNECTION_STATE_DISCONNECTED);
+                            broadcastConnectionStateChange(BtConstants.CONNECTION_STATE_DISCONNECTED);
                             mPlayState = PlaybackState.STATE_NONE;
                             mTransportControls = null;
                         }
@@ -249,23 +248,6 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
         }
     }
 
-    private final ServiceConnection mCarServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            LogUtil.debug(TAG, "mCarServiceConnection");
-            try {
-                mCarAudioManager = (CarAudioManager) mCar.getCarManager(Car.AUDIO_SERVICE);
-            } catch (CarNotConnectedException ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-
-        }
-    };
-
     /**
      * Initialization.
      *
@@ -273,7 +255,23 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
      */
     public BtMusicMediaPlayer(Context context) {
         mContext = context;
-        mCar = Car.createCar(context, mCarServiceConnection);
+        ServiceConnection carServiceConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                LogUtil.debug(TAG, "mCarServiceConnection");
+                try {
+                    mCarAudioManager = (CarAudioManager) mCar.getCarManager(Car.AUDIO_SERVICE);
+                } catch (CarNotConnectedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+
+            }
+        };
+        mCar = Car.createCar(context, carServiceConnection);
         mCar.connect();
         sAudioFocusManager = new MusicAudioFocusManager(context);
         sBtManager = BtManager.getInstance(mContext);
@@ -289,11 +287,48 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
         } else {
             mIsServiceRestart = true;
         }
-        HardKeyMonitor.getInstance(context).addKeyEventListener(this);
+        // HardKeyMonitor.getInstance(context).addKeyEventListener(this);
         mMediaLibrary = new MediaLibrary();
-        mMediaBrowser = new MediaBrowser(mContext,
-                new ComponentName(KEY_MEDIA_PACKAGE, KEY_MEDIA_CLASS),
-                mConnectionCallback, null);
+        // init mTransportControls when MediaBrowser is reconnected.
+        // init data when media browser is connected.
+        MediaBrowser.ConnectionCallback connectionCallback = new MediaBrowser.ConnectionCallback() {
+            @Override
+            public void onConnected() {
+                LogUtil.error(TAG, "onConnectionSuspended&##############");
+                final MediaSession.Token token = mMediaBrowser.getSessionToken();
+                // init mTransportControls when MediaBrowser is reconnected.
+                mTransportControls = null;
+                mMediaController = new MediaController(mContext, token);
+                if (!mIsAAConnection) {
+                    mMediaController.registerCallback(mMediaControllerCallback);
+                }
+                // init data when media browser is connected.
+                getMetaData();
+                updateMetaData();
+                sendLoadPlayListMessage(mMediaBrowser.getRoot());
+            }
+
+            @Override
+            public void onConnectionSuspended() {
+                LogUtil.error(TAG, "onConnectionSuspended=============");
+                if (mMediaController != null) {
+                    mMediaController.unregisterCallback(mMediaControllerCallback);
+                }
+                mMediaController = null;
+                mTransportControls = null;
+                unRegisterSubscribe(mMediaId);
+            }
+
+            @Override
+            public void onConnectionFailed() {
+                LogUtil.error(TAG, "onConnectionFailed>>>>>>>>>>>>>>>>");
+                mMediaController = null;
+                mTransportControls = null;
+                unRegisterSubscribe(mMediaId);
+            }
+        };
+        mMediaBrowser = new MediaBrowser(mContext, new ComponentName(KEY_MEDIA_PACKAGE, KEY_MEDIA_CLASS), connectionCallback, null);
+        LogUtil.debug(TAG, "mMediaBrowser.isConnected() ===>" + mMediaBrowser.isConnected());
         if (!mMediaBrowser.isConnected()) {
             mMediaBrowser.connect();
         }
@@ -323,68 +358,26 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
         mContext.registerReceiver(mBroadcastReceiver, intentFilter);
     }
 
-    private final MediaBrowser.ConnectionCallback mConnectionCallback =
-            new MediaBrowser.ConnectionCallback() {
-                @Override
-                public void onConnected() {
-                    final MediaSession.Token token = mMediaBrowser.getSessionToken();
-                    LogUtil.debug(TAG, "MediaBrowser.ConnectionCallback Connected");
-
-                    // init mTransportControls when MediaBrowser is reconnected.
-                    mTransportControls = null;
-                    mMediaController = new MediaController(mContext, token);
-                    if (!mIsAAConnection) {
-                        mMediaController.registerCallback(mMediaControllerCallback);
-                    }
-                    // init data when media browser is connected.
-                    getMetaData();
-                    updateMetaData();
-
-                    sendLoadPlayListMessage(mMediaBrowser.getRoot());
-                }
-
-                @Override
-                public void onConnectionSuspended() {
-                    LogUtil.debug(TAG, "MediaBrowser.ConnectionCallback Connection Suspended");
-                    if (mMediaController != null && mMediaControllerCallback != null) {
-                        mMediaController.unregisterCallback(mMediaControllerCallback);
-                    }
-                    mMediaController = null;
-                    mTransportControls = null;
-                    unRegisterSubscribe(mMediaId);
-                }
-
-                @Override
-                public void onConnectionFailed() {
-                    LogUtil.debug(TAG, "MediaBrowser.ConnectionCallback Connection Failed!");
-                    mMediaController = null;
-                    mTransportControls = null;
-                    unRegisterSubscribe(mMediaId);
-                }
-            };
-
     private void updateMetaData() {
         if (mCurrentAudioInfo == null) {
             return;
         }
         try {
-            if (mCallbackListener != null) {
-                synchronized (mCallbackListener) {
-                    int listenerCount = mCallbackListener.beginBroadcast();
-                    mCurrentAudioInfo.setPlayState(mPlayState);
-                    for (int index = 0; index < listenerCount; index++) {
-                        mCallbackListener.getBroadcastItem(index)
-                                .onMetadataChanged(mCurrentAudioInfo);
-                    }
-                    mCallbackListener.finishBroadcast();
+            synchronized (mCallbackListener) {
+                int listenerCount = mCallbackListener.beginBroadcast();
+                mCurrentAudioInfo.setPlayState(mPlayState);
+                for (int index = 0; index < listenerCount; index++) {
+                    mCallbackListener.getBroadcastItem(index)
+                            .onMetadataChanged(mCurrentAudioInfo);
                 }
+                mCallbackListener.finishBroadcast();
             }
         } catch (RemoteException exception) {
             exception.printStackTrace();
         }
     }
 
-    private MediaController.Callback mMediaControllerCallback = new MediaController.Callback() {
+    private final MediaController.Callback mMediaControllerCallback = new MediaController.Callback() {
         @Override
         public void onPlaybackStateChanged(PlaybackState state) {
             LogUtil.debug(TAG, "onPlaybackStateChanged, mMediaSource : " + mMediaSource + ", isTransientLossFocus : " + mStreaming.isTransientLossFocus());

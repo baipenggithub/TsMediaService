@@ -1,6 +1,6 @@
 package com.ts.service.media.presenter;
 
-import android.Manifest;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothA2dpSink;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothAvrcpController;
@@ -8,12 +8,8 @@ import android.bluetooth.BluetoothAvrcpPlayerSettings;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
-import android.content.pm.PackageManager;
-
-import androidx.core.app.ActivityCompat;
 
 import com.ts.sdk.media.constants.BtConstants;
-import com.ts.service.media.UsbServiceApplication;
 import com.ts.service.media.utils.LogUtil;
 
 import java.util.List;
@@ -74,13 +70,10 @@ public final class BtManager {
                     }
                 }
 
+                @SuppressLint("MissingPermission")
                 @Override
                 public void onServiceConnected(int profile, BluetoothProfile proxy) {
                     LogUtil.debug(TAG, "onServiceConnected");
-                    if (ActivityCompat.checkSelfPermission(UsbServiceApplication.getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        LogUtil.debug(TAG, "No BLUETOOTH_CONNECT permission ");
-                        return;
-                    }
                     if (profile == AVRCP_CONTROLLER) {
                         LogUtil.debug(TAG, "onServiceConnected : AVRCP_CONTROLLER");
                         mBtAvrcpContrller = (BluetoothAvrcpController) proxy;
@@ -106,14 +99,11 @@ public final class BtManager {
      *
      * @return BluetoothDevice
      */
+    @SuppressLint("MissingPermission")
     public BluetoothDevice getConnectedDevice() {
-        if (ActivityCompat.checkSelfPermission(UsbServiceApplication.getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            LogUtil.debug(TAG, "No BLUETOOTH_CONNECT permission ");
-            return null;
-        }
         Set<BluetoothDevice> bondedDevices = mBluetoothAdapter.getBondedDevices();
         for (BluetoothDevice device : bondedDevices) {
-            LogUtil.debug(TAG, "bondedDevice : " + device);
+            LogUtil.debug(TAG, "getConnectedDevice===>" + device);
             // device.isConnected()
             if (getBluetoothState() == BluetoothAdapter.STATE_CONNECTED) {
                 return device;
@@ -127,12 +117,9 @@ public final class BtManager {
      *
      * @return ret state
      */
+    @SuppressLint("MissingPermission")
     public int getBluetoothState() {
         if (mBluetoothAdapter != null) {
-            if (ActivityCompat.checkSelfPermission(UsbServiceApplication.getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                LogUtil.debug(TAG, "No BLUETOOTH_CONNECT permission ");
-                return -10000;
-            }
             int a2dpState = mBluetoothAdapter.getProfileConnectionState(A2DP_SINK);
             LogUtil.debug(TAG, "a2dp state : " + a2dpState);
             if (a2dpState == BluetoothProfile.STATE_CONNECTED) {
@@ -149,12 +136,9 @@ public final class BtManager {
      *
      * @return ret state
      */
+    @SuppressLint("MissingPermission")
     public boolean isAvrcpConnection() {
         if (mBluetoothAdapter != null) {
-            if (ActivityCompat.checkSelfPermission(UsbServiceApplication.getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                LogUtil.debug(TAG, "No BLUETOOTH_CONNECT permission ");
-                return false;
-            }
             int a2dpState = mBluetoothAdapter.getProfileConnectionState(AVRCP_CONTROLLER);
             LogUtil.debug(TAG, "avrcp state : " + a2dpState);
             if (a2dpState == BluetoothProfile.STATE_CONNECTED) {

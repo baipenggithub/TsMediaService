@@ -20,7 +20,7 @@ public abstract class BaseManager {
     private static final int MSG_RETRY_BIND_SERVICE = 0;
     private static final int TIME_RETRY_BIND_SERVICE = 2000;
     private static final String RETRY = "media_retry_thread";
-    private Context mContext;
+    private final Context mContext;
     private ServiceConnection mServiceConnection;
     private IBinder mBinder;
     private boolean mBinderResult;
@@ -51,7 +51,7 @@ public abstract class BaseManager {
         Log.d(TAG, "getAction: " + getAction());
         if (mContext != null) {
             mBinderResult = mContext.bindService(intent, getConnection(), Context.BIND_AUTO_CREATE);
-            Log.d(TAG, "Media BindService mBinderResult:" + mBinderResult);
+            Log.d(TAG, "<===BindService mBinderResult===>" + mBinderResult);
             if (!mBinderResult) {
                 if (mRetryHandler.hasMessages(MSG_RETRY_BIND_SERVICE)) {
                     mRetryHandler.removeMessages(MSG_RETRY_BIND_SERVICE);
@@ -119,7 +119,7 @@ public abstract class BaseManager {
      * Re-bind Media Service.
      */
     private void reBindService() {
-        Log.i(TAG, "Media reBindService:" + mServiceConnected);
+        Log.i(TAG, "bindService-----" + mServiceConnected);
         if (!mServiceConnected) {
             bindService();
         }
@@ -133,6 +133,7 @@ public abstract class BaseManager {
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == MSG_RETRY_BIND_SERVICE) {
+                Log.i(TAG, "handleMessage-----" + mServiceConnected);
                 reBindService();
             }
         }

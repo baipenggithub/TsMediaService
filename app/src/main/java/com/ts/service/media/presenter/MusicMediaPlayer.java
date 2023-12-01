@@ -122,23 +122,6 @@ public class MusicMediaPlayer implements
         }
     });
 
-    private final ServiceConnection mCarServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            LogUtil.debug(TAG, "mCarServiceConnection");
-            try {
-                mCarAudioManager = (CarAudioManager) mCar.getCarManager(Car.AUDIO_SERVICE);
-            } catch (CarNotConnectedException ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-
-        }
-    };
-
     /**
      * Initialization.
      *
@@ -146,7 +129,23 @@ public class MusicMediaPlayer implements
      */
     public MusicMediaPlayer(Context context) {
         mContext = context;
-        mCar = Car.createCar(context, mCarServiceConnection);
+        ServiceConnection carServiceConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                LogUtil.debug(TAG, "mCarServiceConnection");
+                try {
+                    mCarAudioManager = (CarAudioManager) mCar.getCarManager(Car.AUDIO_SERVICE);
+                } catch (CarNotConnectedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+
+            }
+        };
+        mCar = Car.createCar(context, carServiceConnection);
         mCar.connect();
         sAudioFocusManager = new MusicAudioFocusManager(mContext);
         mAudioSourceManager = AudioSourceManager.getInstance(mContext);
@@ -207,10 +206,8 @@ public class MusicMediaPlayer implements
     }
 
     private void initRecentAudio() {
-        if (mUsbDevicesInfoBeans != null) {
-            mUsbDevicesInfoBeans.clear();
-            mUsbDevicesInfoBeans.addAll(UsbDeviceMonitor.getInstance(mContext).getUsbDevices());
-        }
+        mUsbDevicesInfoBeans.clear();
+        mUsbDevicesInfoBeans.addAll(UsbDeviceMonitor.getInstance(mContext).getUsbDevices());
         playByLastMode();
     }
 
@@ -223,8 +220,7 @@ public class MusicMediaPlayer implements
         LogUtil.debug(TAG, "savePlayList:: invoke");
         if (null != sAudios && sAudios.size() > 0) {
             LogUtil.debug(TAG, "savePlayList:: has audio :: size :: " + sAudios.size());
-            List<AudioInfoBean> playList = new ArrayList<>();
-            playList.addAll(sAudios);
+            List<AudioInfoBean> playList = new ArrayList<>(sAudios);
             AudioInfoBean audioInfoBean = playList.get(0);
             if (null != audioInfoBean && !TextUtils.isEmpty(audioInfoBean.getAudioPath())) {
                 LogUtil.debug(TAG, "savePlayList:: has getAudioPath :: "
@@ -260,7 +256,8 @@ public class MusicMediaPlayer implements
                                 if (usbDevices.size() == 0) {
                                     LogUtil.debug(TAG, "usbDevices  size = 0 ");
                                     removeAudiosInfo();
-                                } else if (usbDevices.size() > 0) {
+                                } else {
+                                    usbDevices.size();
                                     mIsRemoveCurrentDevice = true;
                                     if (null != sAudios && sAudios.size() > 0) {
                                         LogUtil.debug(TAG, "onDeviceChange "
@@ -303,7 +300,7 @@ public class MusicMediaPlayer implements
                     public void onScanChange(int state, String deviceId, int portId) {
                         LogUtil.debug(TAG, "onScanChange :: state : " + state
                                 + " : deviceId : " + deviceId + " : portId : " + portId);
-                        if (mUsbDevicesInfoBeans != null && mUsbDevicesInfoBeans.size() != 0) {
+                        if (mUsbDevicesInfoBeans.size() != 0) {
                             if (state == MusicConstants.MEDIA_SCANNER_START) {
                                 playByLastMode();
                             } else if (state == MusicConstants.MEDIA_SCANNER_FINISHED) {
@@ -322,21 +319,19 @@ public class MusicMediaPlayer implements
     private void removeAudiosInfo() {
         LogUtil.debug(TAG, "removeAudiosInfo :: invoke ");
         destroy();
-        if (null != sOnPlayerEventListeners) {
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    try {
-                        sOnPlayerEventListeners.getBroadcastItem(index)
-                                .onMusicPlayerState(mMusicPlayerState,
-                                        MusicConstants.MEDIA_PLAY_ERROR);
-                    } catch (RemoteException ex) {
-                        ex.printStackTrace();
-                    }
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                try {
+                    sOnPlayerEventListeners.getBroadcastItem(index)
+                            .onMusicPlayerState(mMusicPlayerState,
+                                    MusicConstants.MEDIA_PLAY_ERROR);
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
                 }
-                sOnPlayerEventListeners.finishBroadcast();
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
     }
 
@@ -403,7 +398,7 @@ public class MusicMediaPlayer implements
                         lastRecord.setPath(audioInfoBean.getAudioPath());
                     }
                 }
-                if (null != mLastAudios && mLastAudios.size() > 0 && hasData) {
+                if (mLastAudios.size() > 0 && hasData) {
                     LogUtil.debug(TAG, "refreshPlayList :: mLastAudios :: not null ");
                     if (removePort.equals(MusicConstants.USB_1_PORT)) {
                         LogUtil.debug(TAG, "refreshPlayList :: get :: USB_2_PORT ");
@@ -436,7 +431,7 @@ public class MusicMediaPlayer implements
                 if (null != playList && playList.size() > 0) {
                     LogUtil.debug(TAG, "refreshPlayList :: will update playList size :: "
                             + playList.size());
-                    if (null != lastRecord && !TextUtils.isEmpty(lastRecord.getPath())) {
+                    if (!TextUtils.isEmpty(lastRecord.getPath())) {
                         int position = MusicUtils.getInstance()
                                 .getCurrentPlayIndex(playList, lastRecord.getAudioId(),
                                         lastRecord.getPath());
@@ -498,7 +493,7 @@ public class MusicMediaPlayer implements
      */
     private void playByLastMode() {
         LogUtil.debug(TAG, "playByLastMode :: invoke");
-        if (null != mUsbDevicesInfoBeans && mUsbDevicesInfoBeans.size() > 0) {
+        if (mUsbDevicesInfoBeans.size() > 0) {
             LogUtil.debug(TAG, "playByLastMode :: mUsbDevicesInfoBeans size : "
                     + mUsbDevicesInfoBeans.size());
             getUsbUuid(mUsbDevicesInfoBeans);
@@ -961,7 +956,7 @@ public class MusicMediaPlayer implements
             if (null != mCurrentPlayAudioInfo) {
                 mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
             }
-            if (null != sOnPlayerEventListeners && sMediaPlayer != null) {
+            if (sMediaPlayer != null) {
                 synchronized (sOnPlayerEventListeners) {
                     checkListener();
                     int listenerCount = sOnPlayerEventListeners.beginBroadcast();
@@ -1008,20 +1003,18 @@ public class MusicMediaPlayer implements
             ex.printStackTrace();
         } finally {
             mMusicPlayerState = MusicConstants.MUSIC_PLAYER_PAUSE;
-            if (null != sOnPlayerEventListeners) {
-                synchronized (sOnPlayerEventListeners) {
-                    checkListener();
-                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                    for (int index = 0; index < listenerCount; index++) {
-                        try {
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, null);
-                        } catch (RemoteException ex) {
-                            ex.printStackTrace();
-                        }
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                for (int index = 0; index < listenerCount; index++) {
+                    try {
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onMusicPlayerState(mMusicPlayerState, null);
+                    } catch (RemoteException ex) {
+                        ex.printStackTrace();
                     }
-                    sOnPlayerEventListeners.finishBroadcast();
                 }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         }
     }
@@ -1065,7 +1058,7 @@ public class MusicMediaPlayer implements
                     startTimer();
                     mIsPassive = false;
                     mMusicPlayerState = MusicConstants.MUSIC_PLAYER_PLAYING;
-                    if (null != sOnPlayerEventListeners && sMediaPlayer != null) {
+                    if (sMediaPlayer != null) {
                         LogUtil.debug(TAG, "sOnPlayerEventListeners :: is not null ");
                         synchronized (sOnPlayerEventListeners) {
                             checkListener();
@@ -1086,21 +1079,19 @@ public class MusicMediaPlayer implements
                             + requestAudioFocus);
                     mMusicPlayerState = MusicConstants.MUSIC_PLAYER_PAUSE;
                     stopTimer();
-                    if (null != sOnPlayerEventListeners) {
-                        synchronized (sOnPlayerEventListeners) {
-                            checkListener();
-                            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                            for (int index = 0; index < listenerCount; index++) {
-                                try {
-                                    sOnPlayerEventListeners.getBroadcastItem(index)
-                                            .onMusicPlayerState(mMusicPlayerState,
-                                                    "Failed to get audio output focus");
-                                } catch (RemoteException ex) {
-                                    ex.printStackTrace();
-                                }
+                    synchronized (sOnPlayerEventListeners) {
+                        checkListener();
+                        int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                        for (int index = 0; index < listenerCount; index++) {
+                            try {
+                                sOnPlayerEventListeners.getBroadcastItem(index)
+                                        .onMusicPlayerState(mMusicPlayerState,
+                                                "Failed to get audio output focus");
+                            } catch (RemoteException ex) {
+                                ex.printStackTrace();
                             }
-                            sOnPlayerEventListeners.finishBroadcast();
                         }
+                        sOnPlayerEventListeners.finishBroadcast();
                     }
                     if (requestAudioFocus == MusicConstants.REQUEST_DELAY) {
                         mIsPassive = true;
@@ -1123,21 +1114,19 @@ public class MusicMediaPlayer implements
     private void checkCurrentPlayState() {
         if (null != sMediaPlayer && sMediaPlayer.isPlaying()) {
             mMusicPlayerState = MusicConstants.MUSIC_PLAYER_PLAYING;
-            if (null != sOnPlayerEventListeners) {
-                LogUtil.debug(TAG, "play :: sOnPlayerEventListeners ");
-                synchronized (sOnPlayerEventListeners) {
-                    checkListener();
-                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                    for (int index = 0; index < listenerCount; index++) {
-                        try {
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, null);
-                        } catch (RemoteException ex) {
-                            ex.printStackTrace();
-                        }
+            LogUtil.debug(TAG, "play :: sOnPlayerEventListeners ");
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                for (int index = 0; index < listenerCount; index++) {
+                    try {
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onMusicPlayerState(mMusicPlayerState, null);
+                    } catch (RemoteException ex) {
+                        ex.printStackTrace();
                     }
-                    sOnPlayerEventListeners.finishBroadcast();
                 }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         }
     }
@@ -1511,20 +1500,18 @@ public class MusicMediaPlayer implements
      * Check player configuration.
      */
     public void onCheckedPlayerConfig() {
-        if (null != sOnPlayerEventListeners) {
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    try {
-                        sOnPlayerEventListeners.getBroadcastItem(index)
-                                .onPlayerConfig(mPlayMode, false);
-                    } catch (RemoteException ex) {
-                        ex.printStackTrace();
-                    }
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                try {
+                    sOnPlayerEventListeners.getBroadcastItem(index)
+                            .onPlayerConfig(mPlayMode, false);
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
                 }
-                sOnPlayerEventListeners.finishBroadcast();
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
     }
 
@@ -1546,41 +1533,39 @@ public class MusicMediaPlayer implements
      */
     public void onCheckedCurrentPlayTask() {
         if (null != sMediaPlayer && null != sAudios && sAudios.size() > 0) {
-            if (null != sOnPlayerEventListeners) {
-                AudioInfoBean musicInfo = sAudios.get(mCurrentPlayIndex);
-                try {
-                    synchronized (sOnPlayerEventListeners) {
-                        checkListener();
-                        int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                        for (int index = 0; index < listenerCount; index++) {
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, null);
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onPlayMusicOnInfo(musicInfo, mCurrentPlayIndex);
-                            checkCurrentPlayInfo();
-                            if (null != mCurrentPlayAudioInfo) {
-                                mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
-                            }
-                            if (checkMediaPlayerState()) {
-                                sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
-                                        sMediaPlayer.getDuration(),
-                                        sMediaPlayer.getCurrentPosition()
-                                                + MusicConstants.CURRENT_DURATION,
-                                        mBufferProgress, mCurrentPlayAudioInfo);
-                            } else {
-                                sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(0, 0,
-                                        mBufferProgress, mCurrentPlayAudioInfo);
-                            }
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onPlayerConfig(mPlayMode, false);
-
+            AudioInfoBean musicInfo = sAudios.get(mCurrentPlayIndex);
+            try {
+                synchronized (sOnPlayerEventListeners) {
+                    checkListener();
+                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                    for (int index = 0; index < listenerCount; index++) {
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onMusicPlayerState(mMusicPlayerState, null);
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onPlayMusicOnInfo(musicInfo, mCurrentPlayIndex);
+                        checkCurrentPlayInfo();
+                        if (null != mCurrentPlayAudioInfo) {
+                            mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
                         }
-                        sOnPlayerEventListeners.finishBroadcast();
-                    }
+                        if (checkMediaPlayerState()) {
+                            sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
+                                    sMediaPlayer.getDuration(),
+                                    sMediaPlayer.getCurrentPosition()
+                                            + MusicConstants.CURRENT_DURATION,
+                                    mBufferProgress, mCurrentPlayAudioInfo);
+                        } else {
+                            sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(0, 0,
+                                    mBufferProgress, mCurrentPlayAudioInfo);
+                        }
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onPlayerConfig(mPlayMode, false);
 
-                } catch (RuntimeException | RemoteException ex) {
-                    ex.printStackTrace();
+                    }
+                    sOnPlayerEventListeners.finishBroadcast();
                 }
+
+            } catch (RuntimeException | RemoteException ex) {
+                ex.printStackTrace();
             }
         }
     }
@@ -1589,11 +1574,9 @@ public class MusicMediaPlayer implements
      * Remove player status listener.
      */
     public void addOnPlayerEventListener(IMusicPlayerEventListener listener) {
-        if (null != sOnPlayerEventListeners) {
-            sOnPlayerEventListeners.register(listener);
-            if (isUsbMusicSource()) {
-                onCheckedCurrentPlayTask();
-            }
+        sOnPlayerEventListeners.register(listener);
+        if (isUsbMusicSource()) {
+            onCheckedCurrentPlayTask();
         }
     }
 
@@ -1601,25 +1584,21 @@ public class MusicMediaPlayer implements
      * Remove player status listener.
      */
     public void removePlayerListener(IMusicPlayerEventListener listener) {
-        if (null != sOnPlayerEventListeners) {
-            sOnPlayerEventListeners.unregister(listener);
-        }
+        sOnPlayerEventListeners.unregister(listener);
     }
 
     /**
      * Remove all player status listeners.
      */
     public void removeAllPlayerListener() {
-        if (null != sOnPlayerEventListeners) {
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    sOnPlayerEventListeners.unregister(sOnPlayerEventListeners
-                            .getBroadcastItem(index));
-                }
-                sOnPlayerEventListeners.finishBroadcast();
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                sOnPlayerEventListeners.unregister(sOnPlayerEventListeners
+                        .getBroadcastItem(index));
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
     }
 
@@ -1685,20 +1664,18 @@ public class MusicMediaPlayer implements
         } finally {
             sMediaPlayer = null;
             mMusicPlayerState = MusicConstants.MUSIC_PLAYER_END;
-            if (null != sOnPlayerEventListeners) {
-                synchronized (sOnPlayerEventListeners) {
-                    checkListener();
-                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                    for (int index = 0; index < listenerCount; index++) {
-                        try {
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, null);
-                        } catch (RemoteException ex) {
-                            ex.printStackTrace();
-                        }
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                for (int index = 0; index < listenerCount; index++) {
+                    try {
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onMusicPlayerState(mMusicPlayerState, null);
+                    } catch (RemoteException ex) {
+                        ex.printStackTrace();
                     }
-                    sOnPlayerEventListeners.finishBroadcast();
                 }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         }
     }
@@ -1719,7 +1696,7 @@ public class MusicMediaPlayer implements
             savePlayList();
             sAudios.clear();
             sAudios.addAll(audios);
-            mCurrentPlayIndex = index >= 0 ? index : 0;
+            mCurrentPlayIndex = Math.max(index, 0);
             mCurrentPlayAudioInfo = sAudios.get(index);
         }
     }
@@ -1756,20 +1733,18 @@ public class MusicMediaPlayer implements
             ex.printStackTrace();
 
         } finally {
-            if (null != sOnPlayerEventListeners) {
-                synchronized (sOnPlayerEventListeners) {
-                    checkListener();
-                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                    for (int index = 0; index < listenerCount; index++) {
-                        try {
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onPlayerConfig(mPlayMode, true);
-                        } catch (RemoteException ex) {
-                            ex.printStackTrace();
-                        }
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                for (int index = 0; index < listenerCount; index++) {
+                    try {
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onPlayerConfig(mPlayMode, true);
+                    } catch (RemoteException ex) {
+                        ex.printStackTrace();
                     }
-                    sOnPlayerEventListeners.finishBroadcast();
                 }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         }
     }
@@ -1900,41 +1875,6 @@ public class MusicMediaPlayer implements
         @Override
         public void run() {
             try {
-                if (null != sOnPlayerEventListeners) {
-                    saveAudioPlaybackInfo();
-                    checkCurrentPlayInfo();
-                    if (null != mCurrentPlayAudioInfo) {
-                        mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
-                    }
-                    synchronized (sOnPlayerEventListeners) {
-                        checkListener();
-                        int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                        for (int index = 0; index < listenerCount; index++) {
-                            if (null != sMediaPlayer && checkMediaPlayerState()) {
-                                sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
-                                        sMediaPlayer.getDuration(), sMediaPlayer
-                                                .getCurrentPosition() + MusicConstants
-                                                .CURRENT_DURATION, mBufferProgress,
-                                        mCurrentPlayAudioInfo);
-                            } else {
-                                sOnPlayerEventListeners.getBroadcastItem(index)
-                                        .onTaskRuntime(-1, -1,
-                                                mBufferProgress, mCurrentPlayAudioInfo);
-                            }
-                        }
-                        sOnPlayerEventListeners.finishBroadcast();
-                    }
-                }
-            } catch (RuntimeException | RemoteException ex) {
-                ex.fillInStackTrace();
-                onTaskRuntime();
-            }
-        }
-    }
-
-    private void playRunTask() {
-        try {
-            if (null != sOnPlayerEventListeners) {
                 saveAudioPlaybackInfo();
                 checkCurrentPlayInfo();
                 if (null != mCurrentPlayAudioInfo) {
@@ -1943,7 +1883,6 @@ public class MusicMediaPlayer implements
                 synchronized (sOnPlayerEventListeners) {
                     checkListener();
                     int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                    LogUtil.debug(TAG, "onTaskRuntime: sOnPlayerEventListeners = " + listenerCount);
                     for (int index = 0; index < listenerCount; index++) {
                         if (null != sMediaPlayer && checkMediaPlayerState()) {
                             sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
@@ -1959,6 +1898,36 @@ public class MusicMediaPlayer implements
                     }
                     sOnPlayerEventListeners.finishBroadcast();
                 }
+            } catch (RuntimeException | RemoteException ex) {
+                ex.fillInStackTrace();
+                onTaskRuntime();
+            }
+        }
+    }
+
+    private void playRunTask() {
+        try {
+            saveAudioPlaybackInfo();
+            checkCurrentPlayInfo();
+            if (null != mCurrentPlayAudioInfo) {
+                mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
+            }
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                LogUtil.debug(TAG, "onTaskRuntime: sOnPlayerEventListeners = " + listenerCount);
+                for (int index = 0; index < listenerCount; index++) {
+                    if (null != sMediaPlayer && checkMediaPlayerState()) {
+                        sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
+                                sMediaPlayer.getDuration(), sMediaPlayer
+                                        .getCurrentPosition() + MusicConstants
+                                        .CURRENT_DURATION, mBufferProgress,
+                                mCurrentPlayAudioInfo);
+                    } else {
+                        sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(-1, -1, mBufferProgress, mCurrentPlayAudioInfo);
+                    }
+                }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         } catch (RuntimeException | RemoteException ex) {
             ex.fillInStackTrace();
@@ -1985,29 +1954,23 @@ public class MusicMediaPlayer implements
             // Current time
             recordAudioInfo.setCurrentTime(System.currentTimeMillis());
             // Cache info
-            UsbDevicesInfoBean usbDevicesInfoBean = getUsbInfoByAudioPath(path,
-                    mUsbDevicesInfoBeans);
+            UsbDevicesInfoBean usbDevicesInfoBean = getUsbInfoByAudioPath(path, mUsbDevicesInfoBeans);
             if (null != usbDevicesInfoBean) {
-                LogUtil.debug(TAG, "saveAudioPlaybackInfo getPort "
-                        + usbDevicesInfoBean.getPort());
+                LogUtil.debug(TAG, "saveAudioPlaybackInfo getPort " + usbDevicesInfoBean.getPort());
                 if (usbDevicesInfoBean.getPort().equals(MusicConstants.USB_1_PORT)) {
                     if (mUsbOneAudioInfoList == null) {
                         if (!TextUtils.isEmpty(mUsbOnePath)) {
-                            mUsbOneAudioInfoList = MusicUtils.getInstance()
-                                    .filterAudio(mAudioBeans, mUsbTwoPath);
+                            mUsbOneAudioInfoList = MusicUtils.getInstance().filterAudio(mAudioBeans, mUsbTwoPath);
                         }
                     }
-                    MusicUtils.getInstance().saveAudioPlaybackInfo(mContext,
-                            recordAudioInfo, mUsbOneAudioInfoList);
+                    MusicUtils.getInstance().saveAudioPlaybackInfo(mContext, recordAudioInfo, mUsbOneAudioInfoList);
                 } else if (usbDevicesInfoBean.getPort().equals(MusicConstants.USB_2_PORT)) {
                     if (mUsbTwoAudioInfoList == null) {
                         if (!TextUtils.isEmpty(mUsbTwoPath)) {
-                            mUsbTwoAudioInfoList = MusicUtils.getInstance()
-                                    .filterAudio(mAudioBeans, mUsbOnePath);
+                            mUsbTwoAudioInfoList = MusicUtils.getInstance().filterAudio(mAudioBeans, mUsbOnePath);
                         }
                     }
-                    MusicUtils.getInstance().saveAudioPlaybackInfo(mContext,
-                            recordAudioInfo, mUsbTwoAudioInfoList);
+                    MusicUtils.getInstance().saveAudioPlaybackInfo(mContext, recordAudioInfo, mUsbTwoAudioInfoList);
                 }
                 LogUtil.debug(TAG, "cache info=" + recordAudioInfo.toString());
             }
@@ -2017,27 +1980,25 @@ public class MusicMediaPlayer implements
 
     private void onTaskRuntime() {
         LogUtil.debug(TAG, "service : onTaskRuntime:: invoke");
-        if (null != sOnPlayerEventListeners) {
-            checkCurrentPlayInfo();
-            if (null != mCurrentPlayAudioInfo) {
-                mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
-            }
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    try {
-                        sOnPlayerEventListeners.getBroadcastItem(index)
-                                .onTaskRuntime(
-                                        MusicConstants.PLAYER_STATUS_DESTROY,
-                                        MusicConstants.PLAYER_STATUS_DESTROY,
-                                        mBufferProgress, mCurrentPlayAudioInfo);
-                    } catch (RemoteException ex) {
-                        ex.printStackTrace();
-                    }
+        checkCurrentPlayInfo();
+        if (null != mCurrentPlayAudioInfo) {
+            mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
+        }
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                try {
+                    sOnPlayerEventListeners.getBroadcastItem(index)
+                            .onTaskRuntime(
+                                    MusicConstants.PLAYER_STATUS_DESTROY,
+                                    MusicConstants.PLAYER_STATUS_DESTROY,
+                                    mBufferProgress, mCurrentPlayAudioInfo);
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
                 }
-                sOnPlayerEventListeners.finishBroadcast();
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
     }
 
@@ -2052,8 +2013,7 @@ public class MusicMediaPlayer implements
             String genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE);
             LogUtil.debug(TAG, "genre :" + genre + " mCarAudioManager:" + mCarAudioManager);
             if (genre != null && !"".equals(genre) && mCarAudioManager != null) {
-                AudioSetting setting = new AudioSetting(AudioSetting.AUDIO_SETTING_PRESET_EQ,
-                        0, 0, 0);
+                AudioSetting setting = new AudioSetting(AudioSetting.AUDIO_SETTING_PRESET_EQ, 0, 0, 0);
                 try {
                     int band = mCarAudioManager.getAudioSetting(setting);
                     LogUtil.debug(TAG, "band:" + band);
@@ -2088,19 +2048,14 @@ public class MusicMediaPlayer implements
                 sMediaPlayer.setOnInfoListener(this);
                 sMediaPlayer.setLooping(sLoop);
                 sMediaPlayer.setDataSource(musicInfo.getAudioPath());
-                LogUtil.debug(TAG, "startPlay-->: ID:" + musicInfo.getAudioId()
-                        + ",TITLE:" + musicInfo.getAudioName() + ",PATH:"
-                        + musicInfo.getAudioPath());
-                if (null != sOnPlayerEventListeners) {
-                    synchronized (sOnPlayerEventListeners) {
-                        checkListener();
-                        int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                        for (int index = 0; index < listenerCount; index++) {
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, "Playe preparation");
-                        }
-                        sOnPlayerEventListeners.finishBroadcast();
+                LogUtil.debug(TAG, "startPlay-->: ID:" + musicInfo.getAudioId() + ",TITLE:" + musicInfo.getAudioName() + ",PATH:" + musicInfo.getAudioPath());
+                synchronized (sOnPlayerEventListeners) {
+                    checkListener();
+                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                    for (int index = 0; index < listenerCount; index++) {
+                        sOnPlayerEventListeners.getBroadcastItem(index).onMusicPlayerState(mMusicPlayerState, "Playe preparation");
                     }
+                    sOnPlayerEventListeners.finishBroadcast();
                 }
                 sMediaPlayer.prepareAsync();
                 mMusicPlayerState = MusicConstants.MUSIC_PLAYER_PREPARING;
@@ -2109,42 +2064,34 @@ public class MusicMediaPlayer implements
                 LogUtil.debug(TAG, "startPlay---" + ex.getMessage());
                 stopTimer();
                 mMusicPlayerState = MusicConstants.MUSIC_PLAYER_ERROR;
-                if (null != sOnPlayerEventListeners) {
-                    synchronized (sOnPlayerEventListeners) {
-                        checkListener();
-                        int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                        for (int index = 0; index < listenerCount; index++) {
-                            try {
-                                sOnPlayerEventListeners.getBroadcastItem(index)
-                                        .onMusicPlayerState(mMusicPlayerState,
-                                                "Broadcast failure，" + ex.getMessage());
-                            } catch (RemoteException re) {
-                                re.printStackTrace();
-                            }
-                        }
-                        sOnPlayerEventListeners.finishBroadcast();
-                    }
-                }
-            }
-        } else {
-            LogUtil.debug(TAG, "startPlay---" + "Audio Path isEmpty---");
-            mMusicPlayerState = MusicConstants.MUSIC_PLAYER_ERROR;
-            if (null != sOnPlayerEventListeners) {
                 synchronized (sOnPlayerEventListeners) {
                     checkListener();
                     int listenerCount = sOnPlayerEventListeners.beginBroadcast();
                     for (int index = 0; index < listenerCount; index++) {
                         try {
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, null);
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPathInvalid(musicInfo, mCurrentPlayIndex);
-                        } catch (RemoteException ex) {
-                            ex.printStackTrace();
+                            sOnPlayerEventListeners.getBroadcastItem(index).onMusicPlayerState(mMusicPlayerState, "Broadcast failure，" + ex.getMessage());
+                        } catch (RemoteException re) {
+                            re.printStackTrace();
                         }
                     }
                     sOnPlayerEventListeners.finishBroadcast();
                 }
+            }
+        } else {
+            LogUtil.debug(TAG, "startPlay---" + "Audio Path isEmpty---");
+            mMusicPlayerState = MusicConstants.MUSIC_PLAYER_ERROR;
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                for (int index = 0; index < listenerCount; index++) {
+                    try {
+                        sOnPlayerEventListeners.getBroadcastItem(index).onMusicPlayerState(mMusicPlayerState, null);
+                        sOnPlayerEventListeners.getBroadcastItem(index).onMusicPathInvalid(musicInfo, mCurrentPlayIndex);
+                    } catch (RemoteException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         }
     }
@@ -2181,8 +2128,7 @@ public class MusicMediaPlayer implements
                     break;
                 // Random
                 case MusicConstants.MUSIC_MODE_RANDOM:
-                    mCurrentPlayIndex = MusicUtils.getInstance().getRandomNum(
-                            0, sAudios.size() - 1, mCurrentPlayIndex);
+                    mCurrentPlayIndex = MusicUtils.getInstance().getRandomNum(0, sAudios.size() - 1, mCurrentPlayIndex);
                     postViewHandlerCurrentPosition(mCurrentPlayIndex);
                     startPlayMusicIndex(mCurrentPlayIndex);
                     break;
@@ -2199,9 +2145,7 @@ public class MusicMediaPlayer implements
      * @param currentPlayIndex Index
      */
     private void postViewHandlerCurrentPosition(int currentPlayIndex) {
-        if (null != sOnPlayerEventListeners
-                && null != sAudios
-                && sAudios.size() > currentPlayIndex) {
+        if (null != sAudios && sAudios.size() > currentPlayIndex) {
             mCurrentPlayIndex = currentPlayIndex;
             synchronized (sOnPlayerEventListeners) {
                 checkListener();
@@ -2244,20 +2188,18 @@ public class MusicMediaPlayer implements
     @Override
     public void onCompletion(MediaPlayer mediaPlayer) {
         mMusicPlayerState = MusicConstants.MUSIC_PLAYER_STOP;
-        if (null != sOnPlayerEventListeners) {
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    try {
-                        sOnPlayerEventListeners.getBroadcastItem(index)
-                                .onMusicPlayerState(mMusicPlayerState, null);
-                    } catch (RemoteException ex) {
-                        ex.printStackTrace();
-                    }
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                try {
+                    sOnPlayerEventListeners.getBroadcastItem(index)
+                            .onMusicPlayerState(mMusicPlayerState, null);
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
                 }
-                sOnPlayerEventListeners.finishBroadcast();
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
         // After playing,
         // play the next song automatically according to the playback mode set by the user
@@ -2282,28 +2224,26 @@ public class MusicMediaPlayer implements
         if (mIsPressing) {
             return;
         }
-        if (null != sOnPlayerEventListeners) {
-            if (null != mCurrentPlayAudioInfo) {
-                mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
-            }
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    try {
-                        if (checkMediaPlayerState()) {
-                            sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
-                                    sMediaPlayer.getDuration(),
-                                    sMediaPlayer.getCurrentPosition(),
-                                    mBufferProgress,
-                                    mCurrentPlayAudioInfo);
-                        }
-                    } catch (RemoteException ex) {
-                        ex.printStackTrace();
+        if (null != mCurrentPlayAudioInfo) {
+            mCurrentPlayAudioInfo.setPlayState(mMusicPlayerState);
+        }
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                try {
+                    if (checkMediaPlayerState()) {
+                        sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
+                                sMediaPlayer.getDuration(),
+                                sMediaPlayer.getCurrentPosition(),
+                                mBufferProgress,
+                                mCurrentPlayAudioInfo);
                     }
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
                 }
-                sOnPlayerEventListeners.finishBroadcast();
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
     }
 
@@ -2317,20 +2257,18 @@ public class MusicMediaPlayer implements
         stopTimer();
         onReset();
         String content = getErrorMessage(event);
-        if (null != sOnPlayerEventListeners) {
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    try {
-                        sOnPlayerEventListeners.getBroadcastItem(index)
-                                .onMusicPlayerState(mMusicPlayerState, content);
-                    } catch (RemoteException ex) {
-                        ex.printStackTrace();
-                    }
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                try {
+                    sOnPlayerEventListeners.getBroadcastItem(index)
+                            .onMusicPlayerState(mMusicPlayerState, content);
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
                 }
-                sOnPlayerEventListeners.finishBroadcast();
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
 
         if (!isUsbMusicSource()) {
@@ -2349,9 +2287,7 @@ public class MusicMediaPlayer implements
 
     private void checkListener() {
         try {
-            if (sOnPlayerEventListeners != null) {
-                sOnPlayerEventListeners.finishBroadcast();
-            }
+            sOnPlayerEventListeners.finishBroadcast();
         } catch (IllegalStateException ex) {
             LogUtil.debug(TAG, "RemoteCallbackList checkListener");
         }
@@ -2402,20 +2338,18 @@ public class MusicMediaPlayer implements
         if (state > -1) {
             mMusicPlayerState = state;
         }
-        if (null != sOnPlayerEventListeners) {
-            synchronized (sOnPlayerEventListeners) {
-                checkListener();
-                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                for (int index = 0; index < listenerCount; index++) {
-                    try {
-                        sOnPlayerEventListeners.getBroadcastItem(index)
-                                .onMusicPlayerState(mMusicPlayerState, null);
-                    } catch (RemoteException ex) {
-                        ex.printStackTrace();
-                    }
+        synchronized (sOnPlayerEventListeners) {
+            checkListener();
+            int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+            for (int index = 0; index < listenerCount; index++) {
+                try {
+                    sOnPlayerEventListeners.getBroadcastItem(index)
+                            .onMusicPlayerState(mMusicPlayerState, null);
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
                 }
-                sOnPlayerEventListeners.finishBroadcast();
             }
+            sOnPlayerEventListeners.finishBroadcast();
         }
         return false;
     }
@@ -2469,31 +2403,28 @@ public class MusicMediaPlayer implements
                 pause();
             }
             int position = sMediaPlayer.getCurrentPosition() + MusicConstants.FAST_FORWARD_OFFSET;
-            position = position < sMediaPlayer.getDuration()
-                    ? position : sMediaPlayer.getDuration();
+            position = Math.min(position, sMediaPlayer.getDuration());
             LogUtil.debug(TAG, " seekTo position ::  " + String.valueOf(position));
             sMediaPlayer.seekTo(position);
-            if (null != sOnPlayerEventListeners) {
-                synchronized (sOnPlayerEventListeners) {
-                    checkListener();
-                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                    for (int index = 0; index < listenerCount; index++) {
-                        try {
-                            if (checkMediaPlayerState()) {
-                                sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
-                                        sMediaPlayer.getDuration(),
-                                        sMediaPlayer.getCurrentPosition(),
-                                        mBufferProgress,
-                                        mCurrentPlayAudioInfo);
-                            }
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, null);
-                        } catch (RemoteException ex) {
-                            ex.printStackTrace();
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                for (int index = 0; index < listenerCount; index++) {
+                    try {
+                        if (checkMediaPlayerState()) {
+                            sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
+                                    sMediaPlayer.getDuration(),
+                                    sMediaPlayer.getCurrentPosition(),
+                                    mBufferProgress,
+                                    mCurrentPlayAudioInfo);
                         }
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onMusicPlayerState(mMusicPlayerState, null);
+                    } catch (RemoteException ex) {
+                        ex.printStackTrace();
                     }
-                    sOnPlayerEventListeners.finishBroadcast();
                 }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         }
     }
@@ -2516,27 +2447,25 @@ public class MusicMediaPlayer implements
             }
             LogUtil.debug(TAG, "seekTo position ::  " + String.valueOf(position));
             sMediaPlayer.seekTo(position);
-            if (null != sOnPlayerEventListeners) {
-                synchronized (sOnPlayerEventListeners) {
-                    checkListener();
-                    int listenerCount = sOnPlayerEventListeners.beginBroadcast();
-                    for (int index = 0; index < listenerCount; index++) {
-                        try {
-                            if (checkMediaPlayerState()) {
-                                sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
-                                        sMediaPlayer.getDuration(),
-                                        sMediaPlayer.getCurrentPosition(),
-                                        mBufferProgress,
-                                        mCurrentPlayAudioInfo);
-                            }
-                            sOnPlayerEventListeners.getBroadcastItem(index)
-                                    .onMusicPlayerState(mMusicPlayerState, null);
-                        } catch (RemoteException ex) {
-                            ex.printStackTrace();
+            synchronized (sOnPlayerEventListeners) {
+                checkListener();
+                int listenerCount = sOnPlayerEventListeners.beginBroadcast();
+                for (int index = 0; index < listenerCount; index++) {
+                    try {
+                        if (checkMediaPlayerState()) {
+                            sOnPlayerEventListeners.getBroadcastItem(index).onTaskRuntime(
+                                    sMediaPlayer.getDuration(),
+                                    sMediaPlayer.getCurrentPosition(),
+                                    mBufferProgress,
+                                    mCurrentPlayAudioInfo);
                         }
+                        sOnPlayerEventListeners.getBroadcastItem(index)
+                                .onMusicPlayerState(mMusicPlayerState, null);
+                    } catch (RemoteException ex) {
+                        ex.printStackTrace();
                     }
-                    sOnPlayerEventListeners.finishBroadcast();
                 }
+                sOnPlayerEventListeners.finishBroadcast();
             }
         }
     }

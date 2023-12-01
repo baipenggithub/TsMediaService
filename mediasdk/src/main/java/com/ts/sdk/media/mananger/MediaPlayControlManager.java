@@ -98,8 +98,7 @@ public class MediaPlayControlManager extends BaseManager {
     private int mTargetPlayer = NO_PLAYING;
 
     private ComponentName componentNameRemoteUi() {
-        return new ComponentName(ServiceConstants.CP_AA_SERVICE_PKG_NAME,
-                ServiceConstants.CP_AA_SERVICE_CLS_NAME);
+        return new ComponentName(ServiceConstants.CP_AA_SERVICE_PKG_NAME, ServiceConstants.CP_AA_SERVICE_CLS_NAME);
     }
 
     private final Handler mReConnectHandler = new Handler(new Handler.Callback() {
@@ -1046,7 +1045,7 @@ public class MediaPlayControlManager extends BaseManager {
     }
 
     /**
-     *  Register MediaSource listener.
+     * Register MediaSource listener.
      *
      * @param callback IMediaSourceCallback
      */
