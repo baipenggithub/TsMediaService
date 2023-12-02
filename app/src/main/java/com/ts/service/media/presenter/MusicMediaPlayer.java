@@ -7,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.ServiceConnection;
 import android.media.AudioManager;
-import android.media.AudioSetting;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -2013,16 +2012,17 @@ public class MusicMediaPlayer implements
             String genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE);
             LogUtil.debug(TAG, "genre :" + genre + " mCarAudioManager:" + mCarAudioManager);
             if (genre != null && !"".equals(genre) && mCarAudioManager != null) {
-                AudioSetting setting = new AudioSetting(AudioSetting.AUDIO_SETTING_PRESET_EQ, 0, 0, 0);
-                try {
-                    int band = mCarAudioManager.getAudioSetting(setting);
-                    LogUtil.debug(TAG, "band:" + band);
-                    if (band == MusicConstants.SETTING_PRESET_EQ_SMART) {
+                // TODO baipeng
+                //AudioSetting setting = new AudioSetting(AudioSetting.AUDIO_SETTING_PRESET_EQ, 0, 0, 0);
+               // try {
+                  //  int band = mCarAudioManager.getAudioSetting(setting);
+                   // LogUtil.debug(TAG, "band:" + band);
+                   // if (band == MusicConstants.SETTING_PRESET_EQ_SMART) {
                         MusicUtils.getInstance().setPresetEqForSmart(genre, mCarAudioManager);
-                    }
-                } catch (CarNotConnectedException ex) {
-                    ex.printStackTrace();
-                }
+                   // }
+                //} catch (CarNotConnectedException ex) {
+                //    ex.printStackTrace();
+               // }
             }
             if (null == sAudioFocusManager) {
                 sAudioFocusManager = new MusicAudioFocusManager(mContext);

@@ -10,10 +10,6 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
-import android.media.IUsbScannerEventListener;
-import android.media.UsbScannerEvent;
-import android.media.UsbScannerManager;
-import android.media.UsbScannerResult;
 import android.net.Uri;
 import android.os.storage.DiskInfo;
 import android.os.storage.StorageManager;
@@ -27,7 +23,6 @@ import com.ts.sdk.media.constants.ServiceConstants;
 import com.ts.service.media.constants.MusicConstants;
 import com.ts.service.media.constants.VideoConstants;
 import com.ts.service.media.utils.LogUtil;
-import com.ts.service.media.utils.MediaScannerFile;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -45,8 +40,8 @@ public class UsbDeviceMonitor {
     private final UsbManager mUsbManager;
     private Context mContext;
     private UsbBroadcastReceiver mUsbBroadcastReceiver;
-    private UsbScannerManager mUsbScannerManager;
-    private IUsbScannerEventListener.Stub mScannerEventListener;
+   // private UsbScannerManager mUsbScannerManager;
+   // private IUsbScannerEventListener.Stub mScannerEventListener;
     private List<UsbDeviceListener> mListenerList = new ArrayList<>();
     private List<UsbDevicesInfoBean> mDevicesList = new ArrayList<>();
 
@@ -91,7 +86,7 @@ public class UsbDeviceMonitor {
     private UsbDeviceMonitor(Context context) {
         mContext = context;
         mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
-        mUsbScannerManager = new UsbScannerManager(context);
+      //  mUsbScannerManager = new UsbScannerManager(context);
     }
 
     /**
@@ -113,61 +108,61 @@ public class UsbDeviceMonitor {
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         filter.addAction(VideoConstants.ACTION_USB_PERMISSION);
         mContext.registerReceiver(mUsbBroadcastReceiver, filter);
-
-        mScannerEventListener = new IUsbScannerEventListener.Stub() {
-
-            @Override
-            public void onMountReceived(int type, String deviceId, int portId) {
-                LogUtil.debug(TAG, "onMountReceived type : " + type + "deviceId : " + deviceId + "portId : " + portId);
-                if (mUsbScannerManager != null) {
-                    LogUtil.debug(TAG, "onMountReceived ComponentName : ");
-                    mUsbScannerManager.setPriority(UsbScannerEvent.TYPE_USB, 1, UsbScannerEvent.SCAN_AUDIO);
-                }
-            }
-
-            @Override
-            public void onUnMountReceived(int type, String deviceId, int portId) {
-                LogUtil.debug(TAG, "onUnMountReceived type : " + type
-                        + "deviceId : " + deviceId + "portId : " + portId);
-            }
-
-            @Override
-            public void onMediaSyncStarted(int type, String deviceId, int portId) {
-                for (UsbDevicesInfoBean devicesInfoBean : mDevicesList) {
-                    if (devicesInfoBean.getUuid().equals(deviceId)) {
-                        devicesInfoBean.setScanState(ServiceConstants.MEDIA_SCANNER_STARTED);
-                    }
-                }
-                for (UsbDeviceListener listener : mListenerList) {
-                    listener.onScanChange(ServiceConstants.MEDIA_SCANNER_STARTED, deviceId, portId);
-                }
-                LogUtil.debug(TAG, "onMediaSyncStarted type : " + type
-                        + "deviceId : " + deviceId + "portId : " + portId);
-            }
-
-            @Override
-            public void onMediaSyncInProgress(int type, String deviceId,
-                                              int portId, UsbScannerResult result) {
-                // TODO nothing
-            }
-
-            @Override
-            public void onMediaSyncCompleted(int type, String deviceId, int portId) {
-                for (UsbDevicesInfoBean devicesInfoBean : mDevicesList) {
-                    if (devicesInfoBean.getUuid().equals(deviceId)) {
-                        devicesInfoBean.setScanState(ServiceConstants.MEDIA_SCANNER_FINISHED);
-                    }
-                }
-                for (UsbDeviceListener listener : mListenerList) {
-                    listener.onScanChange(ServiceConstants.MEDIA_SCANNER_FINISHED,
-                            deviceId, portId);
-                }
-                MediaScannerFile.getInstance(mContext).scanCompleted();
-                LogUtil.debug(TAG, "onMediaSyncCompleted type : " + type
-                        + "deviceId : " + deviceId + "portId : " + portId);
-            }
-        };
-        mUsbScannerManager.registerListener(mScannerEventListener);
+//
+//        mScannerEventListener = new IUsbScannerEventListener.Stub() {
+//
+//            @Override
+//            public void onMountReceived(int type, String deviceId, int portId) {
+//                LogUtil.debug(TAG, "onMountReceived type : " + type + "deviceId : " + deviceId + "portId : " + portId);
+//                if (mUsbScannerManager != null) {
+//                    LogUtil.debug(TAG, "onMountReceived ComponentName : ");
+//                    mUsbScannerManager.setPriority(UsbScannerEvent.TYPE_USB, 1, UsbScannerEvent.SCAN_AUDIO);
+//                }
+//            }
+//
+//            @Override
+//            public void onUnMountReceived(int type, String deviceId, int portId) {
+//                LogUtil.debug(TAG, "onUnMountReceived type : " + type
+//                        + "deviceId : " + deviceId + "portId : " + portId);
+//            }
+//
+//            @Override
+//            public void onMediaSyncStarted(int type, String deviceId, int portId) {
+//                for (UsbDevicesInfoBean devicesInfoBean : mDevicesList) {
+//                    if (devicesInfoBean.getUuid().equals(deviceId)) {
+//                        devicesInfoBean.setScanState(ServiceConstants.MEDIA_SCANNER_STARTED);
+//                    }
+//                }
+//                for (UsbDeviceListener listener : mListenerList) {
+//                    listener.onScanChange(ServiceConstants.MEDIA_SCANNER_STARTED, deviceId, portId);
+//                }
+//                LogUtil.debug(TAG, "onMediaSyncStarted type : " + type
+//                        + "deviceId : " + deviceId + "portId : " + portId);
+//            }
+//
+//            @Override
+//            public void onMediaSyncInProgress(int type, String deviceId,
+//                                              int portId, UsbScannerResult result) {
+//                // TODO nothing
+//            }
+//
+//            @Override
+//            public void onMediaSyncCompleted(int type, String deviceId, int portId) {
+//                for (UsbDevicesInfoBean devicesInfoBean : mDevicesList) {
+//                    if (devicesInfoBean.getUuid().equals(deviceId)) {
+//                        devicesInfoBean.setScanState(ServiceConstants.MEDIA_SCANNER_FINISHED);
+//                    }
+//                }
+//                for (UsbDeviceListener listener : mListenerList) {
+//                    listener.onScanChange(ServiceConstants.MEDIA_SCANNER_FINISHED,
+//                            deviceId, portId);
+//                }
+//                MediaScannerFile.getInstance(mContext).scanCompleted();
+//                LogUtil.debug(TAG, "onMediaSyncCompleted type : " + type
+//                        + "deviceId : " + deviceId + "portId : " + portId);
+//            }
+//        };
+//        mUsbScannerManager.registerListener(mScannerEventListener);
         mDevicesList = scanUsbUuid(null, mDevicesList);
         for (UsbDevicesInfoBean devicesInfoBean : mDevicesList) {
             devicesInfoBean.setScanState(ServiceConstants.MEDIA_SCANNER_FINISHED);
@@ -181,7 +176,7 @@ public class UsbDeviceMonitor {
         if (mUsbBroadcastReceiver != null) {
             mContext.unregisterReceiver(mUsbBroadcastReceiver);
         }
-        mUsbScannerManager.unregisterListener(mScannerEventListener);
+       // mUsbScannerManager.unregisterListener(mScannerEventListener);
     }
 
     /**

@@ -17,7 +17,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.media.AudioSetting;
 import android.media.MediaDescription;
 import android.media.MediaMetadata;
 import android.media.browse.MediaBrowser;
@@ -200,13 +199,18 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
                         mIsAvrcpConnection = false;
                     }
                     break;
-                case BluetoothAvrcpController.ACTION_ADDRESSED_PLAYER_CHANGED:
+                    // TODO baipeng
+            /*    case BluetoothAvrcpController.ACTION_ADDRESSED_PLAYER_CHANGED:
                     LogUtil.debug(TAG, "BtMusic list player has changed");
                     unRegisterSubscribe(mMediaId);
                     mHandler.removeMessages(TYPE_SUBSCRIBE_PLAY_LIST);
                     sendLoadPlayListMessage(BtConstants.BT_PLAY_LIST_ROOT);
-                    break;
+                    break;*/
                 default:
+                    LogUtil.debug(TAG, "BtMusic list player has changed");
+                    unRegisterSubscribe(mMediaId);
+                    mHandler.removeMessages(TYPE_SUBSCRIBE_PLAY_LIST);
+                    sendLoadPlayListMessage(BtConstants.BT_PLAY_LIST_ROOT);
                     break;
             }
         }
@@ -354,7 +358,8 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         intentFilter.addAction(ACTION_BROWSE_CONNECTION_STATE_CHANGED);
         intentFilter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
-        intentFilter.addAction(BluetoothAvrcpController.ACTION_ADDRESSED_PLAYER_CHANGED);
+        // TODO baipeng
+       // intentFilter.addAction(BluetoothAvrcpController.ACTION_ADDRESSED_PLAYER_CHANGED);
         mContext.registerReceiver(mBroadcastReceiver, intentFilter);
     }
 
@@ -536,17 +541,18 @@ public class BtMusicMediaPlayer implements A2dpAudioFocusHandler.IAudioFocusList
             String genre = metadataItem.getAudioGenre();
             LogUtil.debug(TAG, "genre :" + genre + ",mCarAudioManager:" + mCarAudioManager);
             if (genre != null && !"".equals(genre) && mCarAudioManager != null) {
-                AudioSetting setting = new AudioSetting(AudioSetting.AUDIO_SETTING_PRESET_EQ,
-                        0, 0, 0);
-                try {
-                    int band = mCarAudioManager.getAudioSetting(setting);
-                    LogUtil.debug(TAG, "band:" + band);
-                    if (band == MusicConstants.SETTING_PRESET_EQ_SMART) {
+                // TODO baipeng
+//                AudioSetting setting = new AudioSetting(AudioSetting.AUDIO_SETTING_PRESET_EQ,
+//                        0, 0, 0);
+//                try {
+//                    int band = mCarAudioManager.getAudioSetting(setting);
+//                    LogUtil.debug(TAG, "band:" + band);
+//                    if (band == MusicConstants.SETTING_PRESET_EQ_SMART) {
                         MusicUtils.getInstance().setPresetEqForSmart(genre, mCarAudioManager);
-                    }
-                } catch (CarNotConnectedException ex) {
-                    ex.printStackTrace();
-                }
+//                    }
+//                } catch (CarNotConnectedException ex) {
+//                    ex.printStackTrace();
+//                }
             }
             if (mMediaController != null) {
                 PlaybackState playbackState = mMediaController.getPlaybackState();

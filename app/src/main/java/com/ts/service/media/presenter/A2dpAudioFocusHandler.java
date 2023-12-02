@@ -262,7 +262,8 @@ public class A2dpAudioFocusHandler extends Handler {
         LogUtil.debug(TAG, "startA2dpRender_mIsStartA2dpRender : "
                 + mDevice + "mAudioFocus : " + mAudioFocus);
         getConnectDevice(mA2dpSinkService);
-        mA2dpSinkService.startA2dpRender(mDevice);
+        // TODO baipeng
+       // mA2dpSinkService.startA2dpRender(mDevice);
     }
 
 
@@ -270,7 +271,8 @@ public class A2dpAudioFocusHandler extends Handler {
         LogUtil.debug(TAG, "stopA2dpRender_mIsStartA2dpRender : "
                 + "mDevice : " + mDevice);
         getConnectDevice(mA2dpSinkService);
-        mA2dpSinkService.stopA2dpRender(mDevice);
+        // TODO baipeng
+      //  mA2dpSinkService.stopA2dpRender(mDevice);
     }
 
     private BluetoothDevice getConnectedDevice() {

@@ -52,9 +52,9 @@ dependencies {
     implementation 'com.google.android.material:material:1.10.0'
     implementation files('libs/systemsettings_sdk.jar')
     implementation files('libs/engineermode_sdk.jar')
-    implementation files('libs/ts_framework.jar')
-    compileOnly files('libs/carservice.jar')
+   // compileOnly files('libs/ts_framework.jar')
     compileOnly files('libs/framework.jar')
+    compileOnly files('libs/carservice.jar')
 
     implementation files('libs/OnlineMusic.jar')
     implementation files('libs/saic_cp_aa.jar')

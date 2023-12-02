@@ -12,6 +12,7 @@ import android.content.Context;
 import com.ts.sdk.media.constants.BtConstants;
 import com.ts.service.media.utils.LogUtil;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 
@@ -104,10 +105,18 @@ public final class BtManager {
         Set<BluetoothDevice> bondedDevices = mBluetoothAdapter.getBondedDevices();
         for (BluetoothDevice device : bondedDevices) {
             LogUtil.debug(TAG, "getConnectedDevice===>" + device);
-            // device.isConnected()
-            if (getBluetoothState() == BluetoothAdapter.STATE_CONNECTED) {
-                return device;
+            Method isConnectedMethod;
+            try {
+                isConnectedMethod = BluetoothDevice.class.getDeclaredMethod("isConnected", (Class[]) null);
+                isConnectedMethod.setAccessible(true);
+                boolean isConnected = (boolean) isConnectedMethod.invoke(device, (Object[]) null);
+                if (isConnected && getBluetoothState() == BluetoothAdapter.STATE_CONNECTED) {
+                    return device;
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
+
         }
         return null;
     }
