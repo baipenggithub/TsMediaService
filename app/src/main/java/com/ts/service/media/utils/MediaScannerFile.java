@@ -152,8 +152,7 @@ public class MediaScannerFile {
         for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
 
             // If not music
-            String isMusic = cursor
-                    .getString(cursor.getColumnIndex(MediaStore.Audio.Media.IS_MUSIC));
+            String isMusic = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.IS_MUSIC));
             if (isMusic != null && isMusic.equals("")) {
                 continue;
             }
@@ -165,23 +164,17 @@ public class MediaScannerFile {
             music.setAudioAlbumName(cursor.getString(cursor
                     .getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)));
             // name
-            music.setAudioName(cursor.getString(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.TITLE)));
+            music.setAudioName(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)));
             // songster
-            music.setAudioArtistName(cursor.getString(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.ARTIST)));
+            music.setAudioArtistName(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST)));
             // path
-            music.setAudioPath(cursor.getString(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.DATA)));
+            music.setAudioPath(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA)));
             // duration
-            music.setAddTime(cursor.getInt(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.DURATION)));
+            music.setAddTime(cursor.getInt(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION)));
             // size
-            music.setAudioSize(cursor.getInt(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.SIZE)));
+            music.setAudioSize(cursor.getInt(cursor.getColumnIndex(MediaStore.Audio.Media.SIZE)));
             // album id
-            music.setAvatar(String.valueOf(cursor.getInt(cursor.getColumnIndex(
-                    MediaStore.Audio.Media.ALBUM_ID))));
+            music.setAvatar(String.valueOf(cursor.getInt(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))));
             if (MusicUtils.getInstance().filterAudioType(music.getAudioPath())) {
                 musicInfoList.add(music);
                 LogUtil.error("queryAudioByUri####", "audio:" + music.toString());

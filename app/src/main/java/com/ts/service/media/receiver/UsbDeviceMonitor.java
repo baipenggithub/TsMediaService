@@ -40,8 +40,8 @@ public class UsbDeviceMonitor {
     private final UsbManager mUsbManager;
     private Context mContext;
     private UsbBroadcastReceiver mUsbBroadcastReceiver;
-   // private UsbScannerManager mUsbScannerManager;
-   // private IUsbScannerEventListener.Stub mScannerEventListener;
+    // private UsbScannerManager mUsbScannerManager;
+    // private IUsbScannerEventListener.Stub mScannerEventListener;
     private List<UsbDeviceListener> mListenerList = new ArrayList<>();
     private List<UsbDevicesInfoBean> mDevicesList = new ArrayList<>();
 
@@ -86,7 +86,7 @@ public class UsbDeviceMonitor {
     private UsbDeviceMonitor(Context context) {
         mContext = context;
         mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
-      //  mUsbScannerManager = new UsbScannerManager(context);
+        //  mUsbScannerManager = new UsbScannerManager(context);
     }
 
     /**
@@ -176,7 +176,7 @@ public class UsbDeviceMonitor {
         if (mUsbBroadcastReceiver != null) {
             mContext.unregisterReceiver(mUsbBroadcastReceiver);
         }
-       // mUsbScannerManager.unregisterListener(mScannerEventListener);
+        // mUsbScannerManager.unregisterListener(mScannerEventListener);
     }
 
     /**
@@ -186,54 +186,67 @@ public class UsbDeviceMonitor {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(Intent.ACTION_MEDIA_MOUNTED)) {
-                LogUtil.debug(TAG, "ACTION_MEDIA_MOUNTED");
-                String uuid = getDeviceId(String.valueOf(intent.getData()));
-                LogUtil.debug(TAG, "ACTION_MEDIA_MOUNTED :: uuid :" + uuid);
-                mDevicesList = scanUsbUuid(uuid, mDevicesList);
-                for (UsbDeviceListener listener : mListenerList) {
-                    listener.onDeviceChange(mDevicesList);
-                }
-            } else if (action.equals(Intent.ACTION_MEDIA_UNMOUNTED)) {
-                LogUtil.debug(TAG, "ACTION_MEDIA_UNMOUNTED");
-                String uuid = getDeviceId(String.valueOf(intent.getData()));
-                for (UsbDevicesInfoBean infoBean : mDevicesList) {
-                    if (uuid.equals(infoBean.getUuid())) {
-                        removeDevices(uuid);
+            if (null == action) {
+                return;
+            }
+            switch (action) {
+                case Intent.ACTION_MEDIA_MOUNTED: {
+                    LogUtil.debug(TAG, "ACTION_MEDIA_MOUNTED");
+                    String uuid = getDeviceId(String.valueOf(intent.getData()));
+                    LogUtil.debug(TAG, "ACTION_MEDIA_MOUNTED :: uuid :" + uuid);
+                    mDevicesList = scanUsbUuid(uuid, mDevicesList);
+                    for (UsbDeviceListener listener : mListenerList) {
+                        listener.onDeviceChange(mDevicesList);
                     }
+                    break;
                 }
-            } else if (action.equals(Intent.ACTION_MEDIA_SCANNER_STARTED)) {
-                LogUtil.debug(TAG, "ACTION_MEDIA_SCANNER_STARTED :" + intent.getData());
-            } else if (action.equals(Intent.ACTION_MEDIA_SCANNER_FINISHED)) {
-                LogUtil.debug(TAG, "ACTION_MEDIA_SCANNER_FINISHED :" + intent.getData());
-            } else if (action.equals(Intent.ACTION_MEDIA_EJECT)) {
-                String uuid = getDeviceId(String.valueOf(intent.getData()));
-                LogUtil.debug(TAG, "ACTION_MEDIA_EJECT : " + intent.getData() + ", uuid : " + uuid);
-                removeDevices(uuid);
-            } else {
-                final UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                if (device == null) {
-                    LogUtil.error(TAG, "UsbBroadcastReceiver, usb device is null");
-                    return;
-                }
-
-                switch (action) {
-                    case VideoConstants.ACTION_USB_PERMISSION:
-                        if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                            // TODO
-                        } else {
-                            LogUtil.error(TAG, "Failed to get the permission of USB Device !");
+                case Intent.ACTION_MEDIA_UNMOUNTED: {
+                    LogUtil.debug(TAG, "ACTION_MEDIA_UNMOUNTED");
+                    String uuid = getDeviceId(String.valueOf(intent.getData()));
+                    for (UsbDevicesInfoBean infoBean : mDevicesList) {
+                        if (uuid.equals(infoBean.getUuid())) {
+                            removeDevices(uuid);
                         }
-                        break;
-                    case UsbManager.ACTION_USB_DEVICE_ATTACHED:
-                        LogUtil.debug(TAG, "ACTION_USB_DEVICE_ATTACHED  " + device.toString());
-                        break;
-                    case UsbManager.ACTION_USB_DEVICE_DETACHED:
-                        LogUtil.debug(TAG, "ACTION_USB_DEVICE_DETACHED  " + device.toString());
-                        break;
-                    default:
-                        break;
+                    }
+                    break;
                 }
+                case Intent.ACTION_MEDIA_SCANNER_STARTED:
+                    LogUtil.debug(TAG, "ACTION_MEDIA_SCANNER_STARTED :" + intent.getData());
+                    break;
+                case Intent.ACTION_MEDIA_SCANNER_FINISHED:
+                    LogUtil.debug(TAG, "ACTION_MEDIA_SCANNER_FINISHED :" + intent.getData());
+                    break;
+                case Intent.ACTION_MEDIA_EJECT: {
+                    String uuid = getDeviceId(String.valueOf(intent.getData()));
+                    LogUtil.debug(TAG, "ACTION_MEDIA_EJECT : " + intent.getData() + ", uuid : " + uuid);
+                    removeDevices(uuid);
+                    break;
+                }
+                default:
+                    final UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    if (device == null) {
+                        LogUtil.error(TAG, "UsbBroadcastReceiver, usb device is null");
+                        return;
+                    }
+
+                    switch (action) {
+                        case VideoConstants.ACTION_USB_PERMISSION:
+                            if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                                // TODO
+                            } else {
+                                LogUtil.error(TAG, "Failed to get the permission of USB Device !");
+                            }
+                            break;
+                        case UsbManager.ACTION_USB_DEVICE_ATTACHED:
+                            LogUtil.debug(TAG, "ACTION_USB_DEVICE_ATTACHED  " + device.toString());
+                            break;
+                        case UsbManager.ACTION_USB_DEVICE_DETACHED:
+                            LogUtil.debug(TAG, "ACTION_USB_DEVICE_DETACHED  " + device.toString());
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
             }
         }
     }
