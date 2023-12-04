@@ -43,15 +43,16 @@ public abstract class BaseManager {
     }
 
     protected void bindService() {
-        Log.d(TAG, "Media BindService mBinderResult");
+        Log.d(TAG, "BindService mBinderResult##########");
         Intent intent = new Intent();
         intent.setAction(getAction());
         Log.d(TAG, "getAction: " + getAction());
         intent.setClassName(ServiceConstants.SERVICE_PACKAGE, ServiceConstants.SERVICE_CLASS_NAME);
         Log.d(TAG, "getAction: " + getAction());
+        Log.d(TAG, "mContext: " + mContext);
         if (mContext != null) {
             mBinderResult = mContext.bindService(intent, getConnection(), Context.BIND_AUTO_CREATE);
-            Log.d(TAG, "<===BindService mBinderResult===>" + mBinderResult);
+            Log.d(TAG, "######Service mBinderResult##" + mBinderResult);
             if (!mBinderResult) {
                 if (mRetryHandler.hasMessages(MSG_RETRY_BIND_SERVICE)) {
                     mRetryHandler.removeMessages(MSG_RETRY_BIND_SERVICE);

@@ -131,6 +131,6 @@ public class MediaService extends Service {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             notification = new Notification.Builder(getApplicationContext(), CHANNEL_ID_STRING).build();
         }
-        startForeground(1, notification);
+        startForeground(97789, notification);
     }
 }
