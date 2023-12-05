@@ -23,6 +23,7 @@ import com.ts.sdk.media.constants.ServiceConstants;
 import com.ts.service.media.constants.MusicConstants;
 import com.ts.service.media.constants.VideoConstants;
 import com.ts.service.media.utils.LogUtil;
+import com.ts.service.media.utils.MediaScannerFile;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -190,7 +191,7 @@ public class UsbDeviceMonitor {
                 return;
             }
             switch (action) {
-                case Intent.ACTION_MEDIA_MOUNTED: {
+                case Intent.ACTION_MEDIA_MOUNTED: {//当媒体被挂载时发送广播
                     LogUtil.debug(TAG, "ACTION_MEDIA_MOUNTED");
                     String uuid = getDeviceId(String.valueOf(intent.getData()));
                     LogUtil.debug(TAG, "ACTION_MEDIA_MOUNTED :: uuid :" + uuid);
@@ -200,7 +201,7 @@ public class UsbDeviceMonitor {
                     }
                     break;
                 }
-                case Intent.ACTION_MEDIA_UNMOUNTED: {
+                case Intent.ACTION_MEDIA_UNMOUNTED: {//当媒体被卸载时发送广播
                     LogUtil.debug(TAG, "ACTION_MEDIA_UNMOUNTED");
                     String uuid = getDeviceId(String.valueOf(intent.getData()));
                     for (UsbDevicesInfoBean infoBean : mDevicesList) {
@@ -210,13 +211,13 @@ public class UsbDeviceMonitor {
                     }
                     break;
                 }
-                case Intent.ACTION_MEDIA_SCANNER_STARTED:
+                case Intent.ACTION_MEDIA_SCANNER_STARTED://当媒体扫描器开始扫描时发送广播。
                     LogUtil.debug(TAG, "ACTION_MEDIA_SCANNER_STARTED :" + intent.getData());
                     break;
-                case Intent.ACTION_MEDIA_SCANNER_FINISHED:
+                case Intent.ACTION_MEDIA_SCANNER_FINISHED://当媒体扫描器完成扫描时发送广播
                     LogUtil.debug(TAG, "ACTION_MEDIA_SCANNER_FINISHED :" + intent.getData());
                     break;
-                case Intent.ACTION_MEDIA_EJECT: {
+                case Intent.ACTION_MEDIA_EJECT: {//当媒体被弹出时发送广播
                     String uuid = getDeviceId(String.valueOf(intent.getData()));
                     LogUtil.debug(TAG, "ACTION_MEDIA_EJECT : " + intent.getData() + ", uuid : " + uuid);
                     removeDevices(uuid);
@@ -230,18 +231,20 @@ public class UsbDeviceMonitor {
                     }
 
                     switch (action) {
-                        case VideoConstants.ACTION_USB_PERMISSION:
+                        case VideoConstants.ACTION_USB_PERMISSION://当需要USB权限时发送广播
                             if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                                 // TODO
                             } else {
                                 LogUtil.error(TAG, "Failed to get the permission of USB Device !");
                             }
                             break;
-                        case UsbManager.ACTION_USB_DEVICE_ATTACHED:
+                        case UsbManager.ACTION_USB_DEVICE_ATTACHED://当USB设备被连接时发送广播
                             LogUtil.debug(TAG, "ACTION_USB_DEVICE_ATTACHED  " + device.toString());
+                            MediaScannerFile.getInstance(mContext).queryAllMusic(MusicConstants.QUERY_MUSIC_CLIENT);
                             break;
-                        case UsbManager.ACTION_USB_DEVICE_DETACHED:
+                        case UsbManager.ACTION_USB_DEVICE_DETACHED://当USB设备被断开时发送广播
                             LogUtil.debug(TAG, "ACTION_USB_DEVICE_DETACHED  " + device.toString());
+                            MediaScannerFile.getInstance(mContext).clearUsbList();
                             break;
                         default:
                             break;

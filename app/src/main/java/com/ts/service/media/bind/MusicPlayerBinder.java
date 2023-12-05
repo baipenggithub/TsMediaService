@@ -110,7 +110,6 @@ public class MusicPlayerBinder extends IMusicPlayerBinderInterface.Stub
     @Override
     public void registerAudioStatusObserver(IUsbMusicCallback callback) throws RemoteException {
         mUsbMusicCallback = callback;
-
     }
 
     @Override

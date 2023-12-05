@@ -565,6 +565,11 @@ public class MediaScannerFile {
         return (ArrayList<VideoInfoBean>) queryVideo(key);
     }
 
+    public void clearUsbList() {
+        List<AudioInfoBean> audioInfoBeans = new ArrayList<AudioInfoBean>();
+        mAudioScanListener.queryComplete(audioInfoBeans);
+    }
+
     public void setVideoScanListener(IVideoScanListener listener) {
         mVideoScanListener = listener;
     }
